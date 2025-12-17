@@ -1,5 +1,124 @@
 # 🚀 MLOps Pipeline: Real-time Crypto Prediction Dashboard
 
+```mermaid
+graph TD
+    UserApp[Mobile App User]
+    AdminApp[Web Admin Pustakawan]
+    
+    subgraph SOA_System
+        Gateway[API Gateway / Load Balancer]
+        
+        Svc_Catalog[Catalog Service]
+        Svc_Member[Membership Service]
+        Svc_Circulation[Circulation Service]
+        Svc_Reserv[Reservation Service]
+        
+        DB[(Centralized LMS Database)]
+    end
+    
+    UserApp --> Gateway
+    AdminApp --> Gateway
+    
+    Gateway --> Svc_Catalog
+    Gateway --> Svc_Member
+    Gateway --> Svc_Circulation
+    Gateway --> Svc_Reserv
+    
+    Svc_Catalog --> DB
+    Svc_Member --> DB
+    Svc_Circulation --> DB
+    Svc_Reserv --> DB
+```
+```mermaid
+graph TD
+    Client[Mobile & Web Clients]
+    
+    subgraph Infrastructure
+        APIGateway[API Gateway <br/> Auth & Routing]
+        MsgBroker[Message Broker <br/> Kafka/RabbitMQ]
+    end
+    
+    subgraph Services
+        %% Catalog Domain
+        Svc_Cat[Catalog Service]
+        DB_Cat[(MongoDB <br/> Catalog)]
+        Cache[(Redis Cache)]
+        
+        %% Circulation Domain
+        Svc_Circ[Circulation Service]
+        DB_Circ[(PostgreSQL <br/> Transactions)]
+        
+        %% Notification Domain
+        Svc_Notif[Notification Service]
+        
+        %% Reservation Domain
+        Svc_Reserv[Reservation Service]
+        DB_Reserv[(Redis/DB <br/> Queues)]
+    end
+
+    Client --> APIGateway
+    
+    APIGateway --> Svc_Cat
+    APIGateway --> Svc_Circ
+    APIGateway --> Svc_Reserv
+    
+    Svc_Cat --> DB_Cat
+    Svc_Cat -.-> Cache
+    
+    Svc_Circ --> DB_Circ
+    Svc_Reserv --> DB_Reserv
+    
+    %% Async Communication
+    Svc_Circ -- "Publish: ItemReturned" --> MsgBroker
+    MsgBroker -- "Subscribe" --> Svc_Reserv
+    MsgBroker -- "Subscribe" --> Svc_Notif
+```
+```mermaid
+graph TD
+    Admin[Admin Dashboard]
+    ReportSvc[Reporting Service]
+    
+    Svc_A[Catalog Service]
+    Svc_B[Circulation Service]
+    Svc_C[Member Service]
+    
+    Admin --> ReportSvc
+    
+    %% Synchronous Calls
+    ReportSvc -- "1. GET /books" --> Svc_A
+    ReportSvc -- "2. GET /loans" --> Svc_B
+    ReportSvc -- "3. GET /users" --> Svc_C
+    
+    Svc_A -.-> ReportSvc
+    Svc_B -.-> ReportSvc
+    Svc_C -.-> ReportSvc
+    
+    ReportSvc -- "Aggregate Data" --> Admin
+```
+```mermaid
+graph TD
+    subgraph Producers
+        Svc_A[Catalog Service]
+        Svc_B[Circulation Service]
+        Svc_C[Member Service]
+    end
+    
+    Broker[Message Broker / Event Bus]
+    
+    subgraph Consumer
+        ReportSvc[Reporting Service]
+        DB_Report[(Data Warehouse <br/> OLAP DB)]
+    end
+    
+    %% Push Events
+    Svc_A -- "Event: BookAdded" --> Broker
+    Svc_B -- "Event: BookLoaned" --> Broker
+    Svc_C -- "Event: UserReg" --> Broker
+    
+    %% Subscribe
+    Broker -- "Push Data" --> ReportSvc
+    ReportSvc --> DB_Report
+```
 Dokumen ini berisi dokumentasi teknis, arsitektur, dan panduan setup untuk infrastruktur MLOps yang berjalan di atas **Minikube (Kubernetes)**. Proyek ini bertujuan untuk mensimulasikan lingkungan produksi *end-to-end* untuk prediksi harga aset kripto, dengan fokus pada otomatisasi infrastruktur dan siklus hidup model (Model Lifecycle).
 
 ---
@@ -177,3 +296,4 @@ Sesuai spesifikasi tugas kuliah, berikut adalah langkah selanjutnya:
 
 ```
 ```
+
